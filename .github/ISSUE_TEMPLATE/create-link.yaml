@@ -20,7 +20,7 @@ body:
     validations:
       required: false
 
-  - type: textarea
+  - type: input
     id: desc
     attributes:
       label: Site Description
@@ -37,6 +37,15 @@ body:
       placeholder: "https://example.com"
     validations:
       required: true
+
+  - type: input
+    id: rss
+    attributes:
+      label: RSS Feed URL
+      description: Full URL of your RSS/Atom feed, including https://
+      placeholder: "https://example.com/feed.xml"
+    validations:
+      required: false
 
   - type: input
     id: avatar

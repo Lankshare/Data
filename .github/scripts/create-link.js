@@ -27,6 +27,7 @@ function parseIssueBody(body) {
     desc: null,
     link: null,
     avatar: null,
+    rss: null,
   };
 
   const titleRegex = /###\s*Site Title\s*\n+([^\n]+)/i;
@@ -34,18 +35,21 @@ function parseIssueBody(body) {
   const descRegex = /###\s*Site Description\s*\n+([\s\S]*?)(?=###|$)/i;
   const linkRegex = /###\s*Site Link\s*\n+([^\n]+)/i;
   const avatarRegex = /###\s*Avatar\s*\n+([^\n]+)/i;
+  const rssRegex = /###\s*RSS Feed URL\s*\n+([^\n]+)/i;
 
   const titleMatch = body.match(titleRegex);
   const nameMatch = body.match(nameRegex);
   const descMatch = body.match(descRegex);
   const linkMatch = body.match(linkRegex);
   const avatarMatch = body.match(avatarRegex);
+  const rssMatch = body.match(rssRegex);
 
   if (titleMatch) fields.title = titleMatch[1].trim();
   if (nameMatch) fields.name = nameMatch[1].trim();
   if (descMatch) fields.desc = descMatch[1].trim();
   if (linkMatch) fields.link = linkMatch[1].trim();
   if (avatarMatch) fields.avatar = avatarMatch[1].trim();
+  if (rssMatch) fields.rss = rssMatch[1].trim();
 
   return fields;
 }
@@ -200,6 +204,20 @@ async function main() {
       }
     }
 
+    // Optional RSS field validation
+    if (fields.rss) {
+      log("Checking RSS URL...");
+      if (!(await isSafeUrl(fields.rss))) {
+        throw new Error(
+          `RSS URL is not allowed or uses a private IP: ${fields.rss}`,
+        );
+      }
+      const rssOk = await checkUrl(fields.rss);
+      if (!rssOk) {
+        throw new Error(`RSS URL is not accessible: ${fields.rss}`);
+      }
+    }
+
     // Load and fill the template
     if (!fs.existsSync(TEMPLATE_PATH)) {
       throw new Error(`Template file not found: ${TEMPLATE_PATH}`);
@@ -214,8 +232,18 @@ async function main() {
       "#[LINK]#": fields.link,
       "#[AVATAR]#": finalAvatar,
       "#[GITHUB]#": issueUser,
+      "#[RSS]#": fields.rss || "", // <-- new replacement (value may be empty)
     };
 
+    // If RSS is empty, remove the entire RSS line from the template
+    if (!fields.rss) {
+      templateContent = templateContent.replace(
+        /^\s*rss:\s*"#\[RSS\]#"\s*\n?/gm,
+        "",
+      );
+    }
+
+    // Perform all replacements
     for (const [placeholder, value] of Object.entries(replacements)) {
       templateContent = templateContent.split(placeholder).join(value);
     }
