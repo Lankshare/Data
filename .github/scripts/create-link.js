@@ -19,6 +19,13 @@ function setOutput(key, value) {
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
 }
 
+// Clean a field: trim whitespace and treat "_No response_" as null
+function cleanField(value) {
+  if (!value) return null;
+  const trimmed = value.trim();
+  return trimmed === "_No response_" ? null : trimmed;
+}
+
 // Extract fields from the issue body using regex
 function parseIssueBody(body) {
   const fields = {
@@ -44,12 +51,13 @@ function parseIssueBody(body) {
   const avatarMatch = body.match(avatarRegex);
   const rssMatch = body.match(rssRegex);
 
-  if (titleMatch) fields.title = titleMatch[1].trim();
-  if (nameMatch) fields.name = nameMatch[1].trim();
-  if (descMatch) fields.desc = descMatch[1].trim();
-  if (linkMatch) fields.link = linkMatch[1].trim();
-  if (avatarMatch) fields.avatar = avatarMatch[1].trim();
-  if (rssMatch) fields.rss = rssMatch[1].trim();
+  // Apply cleanField to every extracted value
+  fields.title = cleanField(titleMatch && titleMatch[1]);
+  fields.name = cleanField(nameMatch && nameMatch[1]);
+  fields.desc = cleanField(descMatch && descMatch[1]);
+  fields.link = cleanField(linkMatch && linkMatch[1]);
+  fields.avatar = cleanField(avatarMatch && avatarMatch[1]);
+  fields.rss = cleanField(rssMatch && rssMatch[1]);
 
   return fields;
 }
@@ -232,7 +240,7 @@ async function main() {
       "#[LINK]#": fields.link,
       "#[AVATAR]#": finalAvatar,
       "#[GITHUB]#": issueUser,
-      "#[RSS]#": fields.rss || "", // <-- new replacement (value may be empty)
+      "#[RSS]#": fields.rss || "", // if RSS is null, use empty string
     };
 
     // If RSS is empty, remove the entire RSS line from the template

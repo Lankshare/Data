@@ -7,7 +7,7 @@ body:
     id: name
     attributes:
       label: Nickname
-      description: The display name for your link.
+      description: Your nickname.
       placeholder: "e.g., John Doe"
     validations:
       required: true
@@ -33,7 +33,7 @@ body:
     id: link
     attributes:
       label: Site Link
-      description: Required. Full URL including https://
+      description: Full URL including https://
       placeholder: "https://example.com"
     validations:
       required: true
@@ -42,7 +42,7 @@ body:
     id: rss
     attributes:
       label: RSS Feed URL
-      description: Full URL of your RSS/Atom feed, including https://
+      description: Optional. Full URL of your RSS/Atom feed, including https://
       placeholder: "https://example.com/feed.xml"
     validations:
       required: false
