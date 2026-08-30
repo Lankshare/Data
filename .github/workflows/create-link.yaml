@@ -12,6 +12,7 @@ jobs:
   add-friend:
     if: contains(github.event.issue.labels.*.name, 'create')
     runs-on: ubuntu-latest
+    environment: friend-link-review
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -30,6 +31,7 @@ jobs:
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: node .github/scripts/create-link.js
 
+      # Pull latest changes before committing to avoid rebase conflicts
       - name: Pull latest changes
         if: steps.run_script.outputs.outcome == 'success'
         run: git pull --rebase origin main
@@ -43,7 +45,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore(link): added @${{ github.event.issue.user.login }}"
+            git commit -m "chore(link): added ${{ steps.run_script.outputs.id }} by @${{ github.event.issue.user.login }}"
             git push origin main
           fi
 

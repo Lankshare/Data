@@ -86,26 +86,20 @@ function isPrivateIpv4(ip) {
 
 // Check if an IPv6 address is private or reserved
 function isPrivateIpv6(ip) {
-  // Normalize: remove zone index (e.g., %eth0) and lowercase
   const normalized = ip.toLowerCase().split("%")[0];
 
-  // Unspecified address (::)
   if (normalized === "::") return true;
-  // Loopback (::1)
   if (normalized === "::1") return true;
 
-  // IPv4-mapped IPv6 (::ffff:192.168.1.1) – extract IPv4 part and check
   if (normalized.startsWith("::ffff:")) {
     const ipv4Part = normalized.substring("::ffff:".length);
     return isPrivateIpv4(ipv4Part);
   }
 
-  // Unique local addresses (fc00::/7) – first byte is fc or fd
   if (normalized.startsWith("fc") || normalized.startsWith("fd")) {
     return true;
   }
 
-  // Link-local addresses (fe80::/10) – first byte is fe8, fe9, fea, feb
   if (
     normalized.startsWith("fe8") ||
     normalized.startsWith("fe9") ||
@@ -115,13 +109,11 @@ function isPrivateIpv6(ip) {
     return true;
   }
 
-  // Everything else is considered public IPv6
   return false;
 }
 
 // Combined IP check: dispatch to IPv4 or IPv6
 function isPrivateIp(ip) {
-  // If it contains a colon, treat as IPv6; otherwise IPv4
   if (ip.includes(":")) {
     return isPrivateIpv6(ip);
   }
@@ -293,6 +285,7 @@ async function main() {
 
     setOutput("outcome", "success");
     setOutput("message", `Successfully added link with ID ${nextId}.`);
+    setOutput("id", String(nextId)); // <-- 新增输出 ID
   } catch (err) {
     console.error(`[create-link] Error: ${err.message}`);
     setOutput("outcome", "failure");
