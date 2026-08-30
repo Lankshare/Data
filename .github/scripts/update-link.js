@@ -192,15 +192,6 @@ function parseYamlFile(filePath) {
   return data;
 }
 
-// Serialize an object back to YAML lines (flat key: "value" format)
-function serializeYaml(data) {
-  const lines = [];
-  for (const [key, value] of Object.entries(data)) {
-    lines.push(`${key}: "${value}"`);
-  }
-  return lines.join("\n") + "\n";
-}
-
 // Update a specific key in the YAML file (or add if missing)
 function updateYamlKey(filePath, key, newValue) {
   const content = fs.readFileSync(filePath, "utf8");
@@ -325,7 +316,7 @@ async function main() {
       "message",
       `Successfully updated link with ID ${fields.link_id}.`,
     );
-    setOutput("id", String(nextId));
+    setOutput("id", fields.link_id); // 修正：使用 fields.link_id 而非未定义的 nextId
   } catch (err) {
     console.error(`[update-link] Error: ${err.message}`);
     setOutput("outcome", "failure");
