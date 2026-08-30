@@ -285,7 +285,7 @@ async function main() {
 
     setOutput("outcome", "success");
     setOutput("message", `Successfully added link with ID ${nextId}.`);
-    setOutput("id", String(nextId)); // <-- 新增输出 ID
+    setOutput("id", String(nextId));
   } catch (err) {
     console.error(`[create-link] Error: ${err.message}`);
     setOutput("outcome", "failure");

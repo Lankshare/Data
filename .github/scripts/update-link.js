@@ -324,6 +324,7 @@ async function main() {
       "message",
       `Successfully updated link with ID ${fields.link_id}.`,
     );
+    setOutput("id", String(nextId));
   } catch (err) {
     console.error(`[update-link] Error: ${err.message}`);
     setOutput("outcome", "failure");
