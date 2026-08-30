@@ -258,6 +258,7 @@ async function main() {
         "message",
         `Successfully deleted link with ID ${fields.link_id}.`,
       );
+      setOutput("id", fields.link_id);
       return;
     }
 
