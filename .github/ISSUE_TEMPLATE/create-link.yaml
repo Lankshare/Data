@@ -1,0 +1,50 @@
+name: Submit a link
+description: Submit your link information for Lankshare.
+title: "Submission Request"
+labels: ["create"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Nickname
+      description: The display name for your link.
+      placeholder: "e.g., John Doe"
+    validations:
+      required: true
+
+  - type: input
+    id: title
+    attributes:
+      label: Site Title
+      description: Optional. Display title for your site. Defaults to the nickname/site name if left empty.
+    validations:
+      required: false
+
+  - type: textarea
+    id: desc
+    attributes:
+      label: Site Description
+      description: A short description of your site (recommended within 50 characters).
+      placeholder: "e.g., A personal blog about tech and life"
+    validations:
+      required: true
+
+  - type: input
+    id: link
+    attributes:
+      label: Site Link
+      description: Required. Full URL including https://
+      placeholder: "https://example.com"
+    validations:
+      required: true
+
+  - type: input
+    id: avatar
+    attributes:
+      label: Avatar
+      description: |
+        Enter a QQ number to use QQ avatar.
+        Enter a full image URL to use a custom avatar.
+      placeholder: "e.g., 10001 or https://example.com/avatar.png"
+    validations:
+      required: true

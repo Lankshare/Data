@@ -1,0 +1,61 @@
+name: Add Link from Issue
+
+permissions:
+  contents: write
+  issues: write
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  add-friend:
+    if: contains(github.event.issue.labels.*.name, 'create')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run script
+        id: run_script
+        env:
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: node .github/scripts/create-link.js
+
+      - name: Pull latest changes
+        if: steps.run_script.outputs.outcome == 'success'
+        run: git pull --rebase origin main
+
+      - name: Commit & Push
+        if: steps.run_script.outputs.outcome == 'success'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore(link): added @${{ github.event.issue.user.login }}"
+            git push origin main
+          fi
+
+      - name: Close issue on success
+        if: steps.run_script.outputs.outcome == 'success'
+        uses: peter-evans/close-issue@v2
+        with:
+          comment: ${{ steps.run_script.outputs.message || 'Successfully added this link.' }}
+
+      - name: Comment on failure
+        if: steps.run_script.outputs.outcome == 'failure'
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: ${{ steps.run_script.outputs.message || 'Failed to add the link. Please check the issue details.' }}
