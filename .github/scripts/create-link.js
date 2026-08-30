@@ -150,10 +150,13 @@ async function checkUrl(url) {
 
 // Convert avatar input to a final URL
 function processAvatar(avatarInput) {
-  if (/^\d+$/.test(avatarInput.trim())) {
-    return `http://q.qlogo.cn/g?b=qq&nk=${avatarInput.trim()}`;
+  const trimmed = avatarInput.trim();
+  if (/^\d+$/.test(trimmed)) {
+    // QQ avatar with high resolution (size 640)
+    return `http://q.qlogo.cn/g?b=qq&nk=${trimmed}&s=640`;
   }
-  return avatarInput.trim();
+  // Custom avatar URL – use as-is
+  return trimmed;
 }
 
 // Determine the next available numeric ID for a new YAML file
@@ -240,7 +243,7 @@ async function main() {
       "#[LINK]#": fields.link,
       "#[AVATAR]#": finalAvatar,
       "#[GITHUB]#": issueUser,
-      "#[RSS]#": fields.rss || "", // if RSS is null, use empty string
+      "#[RSS]#": fields.rss || "",
     };
 
     // If RSS is empty, remove the entire RSS line from the template
