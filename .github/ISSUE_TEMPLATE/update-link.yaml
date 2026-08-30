@@ -1,4 +1,4 @@
-name: Update or Delete a Link
+name: Update or delete a link
 description: Modify an existing link or delete it by leaving all optional fields blank.
 title: "Update/Delete Request"
 labels: ["update"]
