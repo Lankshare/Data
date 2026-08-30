@@ -51,7 +51,6 @@ function parseIssueBody(body) {
   const avatarMatch = body.match(avatarRegex);
   const rssMatch = body.match(rssRegex);
 
-  // Apply cleanField to every extracted value
   fields.title = cleanField(titleMatch && titleMatch[1]);
   fields.name = cleanField(nameMatch && nameMatch[1]);
   fields.desc = cleanField(descMatch && descMatch[1]);
@@ -62,37 +61,71 @@ function parseIssueBody(body) {
   return fields;
 }
 
-// Check whether an IP address is private, reserved, or otherwise unsafe
-function isPrivateIp(ip) {
+// Check if an IPv4 address is private or reserved
+function isPrivateIpv4(ip) {
   const parts = ip.split(".").map(Number);
-  if (parts.length !== 4) return true; // treat non-IPv4 as unsafe
+  if (parts.length !== 4) return true;
   const [a, b, c, d] = parts;
 
-  // 10.0.0.0/8
   if (a === 10) return true;
-  // 172.16.0.0/12
   if (a === 172 && b >= 16 && b <= 31) return true;
-  // 192.168.0.0/16
   if (a === 192 && b === 168) return true;
-  // 127.0.0.0/8
   if (a === 127) return true;
-  // 169.254.0.0/16 (link-local)
   if (a === 169 && b === 254) return true;
-  // 0.0.0.0/8
   if (a === 0) return true;
-  // 100.64.0.0/10 (carrier-grade NAT)
   if (a === 100 && b >= 64 && b <= 127) return true;
-  // 192.0.0.0/24, 192.0.2.0/24, 198.18.0.0/15, 198.51.100.0/24, 203.0.113.0/24
   if (a === 192 && b === 0 && (c === 0 || c === 2)) return true;
   if (a === 198 && (b === 18 || b === 19)) return true;
   if (a === 198 && b === 51 && c === 100) return true;
   if (a === 203 && b === 0 && c === 113) return true;
-  // 224.0.0.0/4 (multicast)
   if (a >= 224 && a <= 239) return true;
-  // 240.0.0.0/4 (reserved)
   if (a >= 240) return true;
 
   return false;
+}
+
+// Check if an IPv6 address is private or reserved
+function isPrivateIpv6(ip) {
+  // Normalize: remove zone index (e.g., %eth0) and lowercase
+  const normalized = ip.toLowerCase().split("%")[0];
+
+  // Unspecified address (::)
+  if (normalized === "::") return true;
+  // Loopback (::1)
+  if (normalized === "::1") return true;
+
+  // IPv4-mapped IPv6 (::ffff:192.168.1.1) – extract IPv4 part and check
+  if (normalized.startsWith("::ffff:")) {
+    const ipv4Part = normalized.substring("::ffff:".length);
+    return isPrivateIpv4(ipv4Part);
+  }
+
+  // Unique local addresses (fc00::/7) – first byte is fc or fd
+  if (normalized.startsWith("fc") || normalized.startsWith("fd")) {
+    return true;
+  }
+
+  // Link-local addresses (fe80::/10) – first byte is fe8, fe9, fea, feb
+  if (
+    normalized.startsWith("fe8") ||
+    normalized.startsWith("fe9") ||
+    normalized.startsWith("fea") ||
+    normalized.startsWith("feb")
+  ) {
+    return true;
+  }
+
+  // Everything else is considered public IPv6
+  return false;
+}
+
+// Combined IP check: dispatch to IPv4 or IPv6
+function isPrivateIp(ip) {
+  // If it contains a colon, treat as IPv6; otherwise IPv4
+  if (ip.includes(":")) {
+    return isPrivateIpv6(ip);
+  }
+  return isPrivateIpv4(ip);
 }
 
 // Validate that a URL uses only http/https and resolves to public IPs
@@ -104,7 +137,6 @@ async function isSafeUrl(url) {
     }
 
     const hostname = parsed.hostname;
-    // Resolve all IP addresses for the hostname
     const addresses = await dns.lookup(hostname, { all: true });
     for (const addr of addresses) {
       if (isPrivateIp(addr.address)) {
@@ -125,14 +157,12 @@ async function checkUrl(url) {
   const timeoutId = setTimeout(() => controller.abort(), 10000);
 
   try {
-    // Try HEAD first (lighter)
     let response = await fetch(url, {
       method: "HEAD",
       redirect: "follow",
       signal: controller.signal,
     });
     if (!response.ok) {
-      // If HEAD fails, try GET
       response = await fetch(url, {
         method: "GET",
         redirect: "follow",
@@ -152,10 +182,8 @@ async function checkUrl(url) {
 function processAvatar(avatarInput) {
   const trimmed = avatarInput.trim();
   if (/^\d+$/.test(trimmed)) {
-    // QQ avatar with high resolution (size 640)
     return `http://q.qlogo.cn/g?b=qq&nk=${trimmed}&s=640`;
   }
-  // Custom avatar URL – use as-is
   return trimmed;
 }
 
@@ -185,7 +213,6 @@ async function main() {
       throw new Error("Required fields missing: name, link");
     }
 
-    // Validate that the link is safe before attempting any fetch
     if (!(await isSafeUrl(fields.link))) {
       throw new Error(
         `Link URL is not allowed or uses a private IP: ${fields.link}`,
@@ -195,13 +222,11 @@ async function main() {
     const finalAvatar = processAvatar(fields.avatar);
     log("Final avatar:", finalAvatar);
 
-    // Check link accessibility
     const linkOk = await checkUrl(fields.link);
     if (!linkOk) {
       throw new Error(`Link is not accessible: ${fields.link}`);
     }
 
-    // If a custom avatar URL is provided (not a QQ number), check it too
     if (fields.avatar && !/^\d+$/.test(fields.avatar.trim())) {
       log("Checking custom avatar URL...");
       if (!(await isSafeUrl(finalAvatar))) {
@@ -215,7 +240,6 @@ async function main() {
       }
     }
 
-    // Optional RSS field validation
     if (fields.rss) {
       log("Checking RSS URL...");
       if (!(await isSafeUrl(fields.rss))) {
@@ -229,7 +253,6 @@ async function main() {
       }
     }
 
-    // Load and fill the template
     if (!fs.existsSync(TEMPLATE_PATH)) {
       throw new Error(`Template file not found: ${TEMPLATE_PATH}`);
     }
@@ -246,7 +269,6 @@ async function main() {
       "#[RSS]#": fields.rss || "",
     };
 
-    // If RSS is empty, remove the entire RSS line from the template
     if (!fields.rss) {
       templateContent = templateContent.replace(
         /^\s*rss:\s*"#\[RSS\]#"\s*\n?/gm,
@@ -254,17 +276,14 @@ async function main() {
       );
     }
 
-    // Perform all replacements
     for (const [placeholder, value] of Object.entries(replacements)) {
       templateContent = templateContent.split(placeholder).join(value);
     }
 
-    // Create data directory if needed
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
 
-    // Write the new YAML file
     const nextId = getNextId(DATA_DIR);
     const newFilePath = path.join(DATA_DIR, `${nextId}.yaml`);
     log(`New file: ${newFilePath}`);
