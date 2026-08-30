@@ -1,0 +1,63 @@
+name: Update or Delete a Link
+description: Modify an existing link or delete it by leaving all optional fields blank.
+title: "Update/Delete Request"
+labels: ["update"]
+body:
+  - type: input
+    id: link_id
+    attributes:
+      label: Link ID
+      description: The numeric ID of the link you want to modify or delete.
+      placeholder: "e.g., 100000001"
+    validations:
+      required: true
+
+  - type: input
+    id: title
+    attributes:
+      label: Site Title
+      description: Optional. New title for your site. Leave blank to keep unchanged.
+    validations:
+      required: false
+
+  - type: input
+    id: name
+    attributes:
+      label: Nickname
+      description: Optional. New display name. Leave blank to keep unchanged.
+    validations:
+      required: false
+
+  - type: textarea
+    id: desc
+    attributes:
+      label: Site Description
+      description: Optional. New description. Leave blank to keep unchanged.
+    validations:
+      required: false
+
+  - type: input
+    id: link
+    attributes:
+      label: Site Link
+      description: Optional. New URL. Leave blank to keep unchanged.
+    validations:
+      required: false
+
+  - type: input
+    id: avatar
+    attributes:
+      label: Avatar
+      description: |
+        Optional. New avatar. Enter a QQ number or a full image URL.
+        Leave blank to keep unchanged.
+    validations:
+      required: false
+
+  - type: input
+    id: rss
+    attributes:
+      label: RSS Feed URL
+      description: Optional. New RSS URL. Leave blank to keep unchanged.
+    validations:
+      required: false
