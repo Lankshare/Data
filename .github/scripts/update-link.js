@@ -266,6 +266,7 @@ async function main() {
       fs.unlinkSync(filePath);
       log(`Link ID ${fields.link_id} deleted`);
       setOutput("outcome", "success");
+      setOutput("action", "delete");
       setOutput(
         "message",
         `Successfully deleted link with ID ${fields.link_id}.`,
@@ -333,15 +334,18 @@ async function main() {
 
     // Rename file if ID was changed
     let outputId = fields.link_id;
+    let action = "update";
     if (finalId !== fields.link_id) {
       const newFilePath = path.join(DATA_DIR, `${finalId}.yaml`);
       fs.renameSync(filePath, newFilePath);
       log(`Link ID renamed from ${fields.link_id} to ${finalId}`);
       outputId = finalId;
+      action = "rename";
     }
 
     log(`Link ID ${fields.link_id} updated`);
     setOutput("outcome", "success");
+    setOutput("action", action);
     setOutput(
       "message",
       `Successfully updated link with ID ${fields.link_id}${finalId !== fields.link_id ? ` → ${finalId}` : ""}.`,

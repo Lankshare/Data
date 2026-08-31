@@ -40,7 +40,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore(link): added ${{ steps.run_script.outputs.id }} by @${{ github.event.issue.user.login }}"
+            git commit -m "chore(link): add ${{ steps.run_script.outputs.id }} by @${{ github.event.issue.user.login }}"
           fi
 
       - name: Pull latest changes
