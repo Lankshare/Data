@@ -13,6 +13,15 @@ body:
       required: true
 
   - type: input
+    id: new_link_id
+    attributes:
+      label: New Link ID
+      description: Optional. Change the link ID to a new value. Only lowercase letters, numbers, and hyphens are allowed. Leave blank to keep unchanged.
+      placeholder: "e.g., new-blog-id"
+    validations:
+      required: false
+
+  - type: input
     id: title
     attributes:
       label: Site Title

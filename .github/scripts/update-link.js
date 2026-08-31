@@ -29,6 +29,7 @@ function cleanField(value) {
 function parseIssueBody(body) {
   const fields = {
     link_id: null,
+    new_link_id: null,
     title: null,
     name: null,
     desc: null,
@@ -38,6 +39,7 @@ function parseIssueBody(body) {
   };
 
   const idRegex = /###\s*Link ID\s*\n+([^\n]+)/i;
+  const newIdRegex = /###\s*New Link ID\s*\n+([^\n]+)/i;
   const titleRegex = /###\s*Site Title\s*\n+([^\n]+)/i;
   const nameRegex = /###\s*Nickname\s*\n+([^\n]+)/i;
   const descRegex = /###\s*Site Description\s*\n+([\s\S]*?)(?=###|$)/i;
@@ -46,6 +48,7 @@ function parseIssueBody(body) {
   const rssRegex = /###\s*RSS Feed URL\s*\n+([^\n]+)/i;
 
   const idMatch = body.match(idRegex);
+  const newIdMatch = body.match(newIdRegex);
   const titleMatch = body.match(titleRegex);
   const nameMatch = body.match(nameRegex);
   const descMatch = body.match(descRegex);
@@ -54,6 +57,7 @@ function parseIssueBody(body) {
   const rssMatch = body.match(rssRegex);
 
   fields.link_id = cleanField(idMatch && idMatch[1]);
+  fields.new_link_id = cleanField(newIdMatch && newIdMatch[1]);
   fields.title = cleanField(titleMatch && titleMatch[1]);
   fields.name = cleanField(nameMatch && nameMatch[1]);
   fields.desc = cleanField(descMatch && descMatch[1]);
@@ -236,12 +240,29 @@ async function main() {
     }
     log("Ownership verified");
 
+    // Validate new_link_id format if provided
+    let finalId = fields.link_id;
+    if (fields.new_link_id) {
+      if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(fields.new_link_id)) {
+        throw new Error(
+          `Invalid new Link ID: "${fields.new_link_id}". Only lowercase letters, numbers, and hyphens are allowed.`
+        );
+      }
+      if (fields.new_link_id !== fields.link_id) {
+        const newFilePath = path.join(DATA_DIR, `${fields.new_link_id}.yaml`);
+        if (fs.existsSync(newFilePath)) {
+          throw new Error(`Link ID "${fields.new_link_id}" already exists. Please choose a different one.`);
+        }
+        finalId = fields.new_link_id;
+      }
+    }
+
     // Determine if any optional field was provided
     const optionalFields = ["title", "name", "desc", "link", "avatar", "rss"];
     const hasAnyField = optionalFields.some((f) => fields[f] !== null);
 
-    if (!hasAnyField) {
-      // All optional fields are empty -> delete the file
+    if (!hasAnyField && !fields.new_link_id) {
+      // All optional fields are empty and no rename -> delete the file
       fs.unlinkSync(filePath);
       log(`Link ID ${fields.link_id} deleted`);
       setOutput("outcome", "success");
@@ -310,13 +331,22 @@ async function main() {
       }
     }
 
+    // Rename file if ID was changed
+    let outputId = fields.link_id;
+    if (finalId !== fields.link_id) {
+      const newFilePath = path.join(DATA_DIR, `${finalId}.yaml`);
+      fs.renameSync(filePath, newFilePath);
+      log(`Link ID renamed from ${fields.link_id} to ${finalId}`);
+      outputId = finalId;
+    }
+
     log(`Link ID ${fields.link_id} updated`);
     setOutput("outcome", "success");
     setOutput(
       "message",
-      `Successfully updated link with ID ${fields.link_id}.`,
+      `Successfully updated link with ID ${fields.link_id}${finalId !== fields.link_id ? ` → ${finalId}` : ""}.`,
     );
-    setOutput("id", fields.link_id); // 修正：使用 fields.link_id 而非未定义的 nextId
+    setOutput("id", outputId);
   } catch (err) {
     console.error(`[update-link] Error: ${err.message}`);
     setOutput("outcome", "failure");
