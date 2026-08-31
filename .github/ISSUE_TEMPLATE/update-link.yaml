@@ -16,7 +16,9 @@ body:
     id: new_link_id
     attributes:
       label: New Link ID
-      description: Optional. Change the link ID to a new value. Only letters, numbers, and hyphens are allowed. Leave blank to keep unchanged.
+      description: |
+        Optional. Change the link ID to a new value. Only letters, numbers, and hyphens are allowed. Leave blank to keep unchanged.
+        Warning: Changing the ID will break any API calls using the old ID. Please ensure all references are updated before proceeding.
       placeholder: "e.g., new-blog-id"
     validations:
       required: false
