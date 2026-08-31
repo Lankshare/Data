@@ -7,8 +7,8 @@ body:
     id: link_id
     attributes:
       label: Link ID
-      description: The numeric ID of the link you want to modify or delete.
-      placeholder: "e.g., 100000001"
+      description: The ID of the link you want to modify or delete.
+      placeholder: "e.g., my-blog"
     validations:
       required: true
 

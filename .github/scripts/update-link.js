@@ -220,8 +220,8 @@ async function main() {
     const fields = parseIssueBody(issueBody);
     log("Parsed fields:", JSON.stringify(fields, null, 2));
 
-    if (!fields.link_id || !/^\d+$/.test(fields.link_id)) {
-      throw new Error("Invalid or missing Link ID");
+    if (!fields.link_id || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(fields.link_id)) {
+      throw new Error("Invalid or missing Link ID. Only lowercase letters, numbers, and hyphens are allowed.");
     }
 
     const filePath = path.join(DATA_DIR, `${fields.link_id}.yaml`);

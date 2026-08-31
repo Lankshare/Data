@@ -4,6 +4,17 @@ title: "Submission Request"
 labels: ["create"]
 body:
   - type: input
+    id: link_id
+    attributes:
+      label: Link ID
+      description: |
+        A custom ID for your link. Only lowercase letters, numbers, and hyphens are allowed.
+        This will be used as the filename, so choose something unique and memorable.
+      placeholder: "e.g., my-blog"
+    validations:
+      required: true
+
+  - type: input
     id: name
     attributes:
       label: Nickname

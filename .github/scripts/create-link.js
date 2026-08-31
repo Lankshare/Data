@@ -29,6 +29,7 @@ function cleanField(value) {
 // Extract fields from the issue body using regex
 function parseIssueBody(body) {
   const fields = {
+    link_id: null,
     title: null,
     name: null,
     desc: null,
@@ -37,6 +38,7 @@ function parseIssueBody(body) {
     rss: null,
   };
 
+  const idRegex = /###\s*Link ID\s*\n+([^\n]+)/i;
   const titleRegex = /###\s*Site Title\s*\n+([^\n]+)/i;
   const nameRegex = /###\s*Nickname\s*\n+([^\n]+)/i;
   const descRegex = /###\s*Site Description\s*\n+([\s\S]*?)(?=###|$)/i;
@@ -44,6 +46,7 @@ function parseIssueBody(body) {
   const avatarRegex = /###\s*Avatar\s*\n+([^\n]+)/i;
   const rssRegex = /###\s*RSS Feed URL\s*\n+([^\n]+)/i;
 
+  const idMatch = body.match(idRegex);
   const titleMatch = body.match(titleRegex);
   const nameMatch = body.match(nameRegex);
   const descMatch = body.match(descRegex);
@@ -51,6 +54,7 @@ function parseIssueBody(body) {
   const avatarMatch = body.match(avatarRegex);
   const rssMatch = body.match(rssRegex);
 
+  fields.link_id = cleanField(idMatch && idMatch[1]);
   fields.title = cleanField(titleMatch && titleMatch[1]);
   fields.name = cleanField(nameMatch && nameMatch[1]);
   fields.desc = cleanField(descMatch && descMatch[1]);
@@ -179,17 +183,9 @@ function processAvatar(avatarInput) {
   return trimmed;
 }
 
-// Determine the next available numeric ID for a new YAML file
-function getNextId(dataDir) {
-  const files = fs.readdirSync(dataDir).filter((f) => /^\d+\.yaml$/.test(f));
-  if (files.length === 0) {
-    return 100000001;
-  }
-  const maxNum = files.reduce((max, file) => {
-    const num = parseInt(file.replace(".yaml", ""), 10);
-    return num > max ? num : max;
-  }, 0);
-  return maxNum + 1;
+// Validate custom ID format: only lowercase letters, numbers, and hyphens
+function isValidId(id) {
+  return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(id);
 }
 
 async function main() {
@@ -276,16 +272,30 @@ async function main() {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
 
-    const nextId = getNextId(DATA_DIR);
-    const newFilePath = path.join(DATA_DIR, `${nextId}.yaml`);
+    if (!fields.link_id) {
+      throw new Error("Required field missing: link_id");
+    }
+
+    if (!isValidId(fields.link_id)) {
+      throw new Error(
+        `Invalid Link ID: "${fields.link_id}". Only lowercase letters, numbers, and hyphens are allowed.`
+      );
+    }
+
+    const newFilePath = path.join(DATA_DIR, `${fields.link_id}.yaml`);
+
+    if (fs.existsSync(newFilePath)) {
+      throw new Error(`Link ID "${fields.link_id}" already exists. Please choose a different one.`);
+    }
+
     log(`New file: ${newFilePath}`);
 
     fs.writeFileSync(newFilePath, templateContent, "utf8");
     log("File written successfully");
 
     setOutput("outcome", "success");
-    setOutput("message", `Successfully added link with ID ${nextId}.`);
-    setOutput("id", String(nextId));
+    setOutput("message", `Successfully added link with ID ${fields.link_id}.`);
+    setOutput("id", fields.link_id);
   } catch (err) {
     console.error(`[create-link] Error: ${err.message}`);
     setOutput("outcome", "failure");
