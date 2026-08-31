@@ -9,24 +9,20 @@ const issueBody = process.env.ISSUE_BODY;
 const TEMPLATE_PATH = path.join(process.env.GITHUB_WORKSPACE, "template.yaml");
 const DATA_DIR = path.join(process.env.GITHUB_WORKSPACE, "data");
 
-// Simple logger
 function log(msg) {
   console.log(`[create-link] ${msg}`);
 }
 
-// Append a key=value line to the GitHub Actions output file
 function setOutput(key, value) {
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
 }
 
-// Clean a field: trim whitespace and treat "_No response_" as null
 function cleanField(value) {
   if (!value) return null;
   const trimmed = value.trim();
   return trimmed === "_No response_" ? null : trimmed;
 }
 
-// Extract fields from the issue body using regex
 function parseIssueBody(body) {
   const fields = {
     link_id: null,
@@ -65,7 +61,6 @@ function parseIssueBody(body) {
   return fields;
 }
 
-// Check if an IPv4 address is private or reserved
 function isPrivateIpv4(ip) {
   const parts = ip.split(".").map(Number);
   if (parts.length !== 4) return true;
@@ -88,7 +83,6 @@ function isPrivateIpv4(ip) {
   return false;
 }
 
-// Check if an IPv6 address is private or reserved
 function isPrivateIpv6(ip) {
   const normalized = ip.toLowerCase().split("%")[0];
 
@@ -100,9 +94,7 @@ function isPrivateIpv6(ip) {
     return isPrivateIpv4(ipv4Part);
   }
 
-  if (normalized.startsWith("fc") || normalized.startsWith("fd")) {
-    return true;
-  }
+  if (normalized.startsWith("fc") || normalized.startsWith("fd")) return true;
 
   if (
     normalized.startsWith("fe8") ||
@@ -116,7 +108,6 @@ function isPrivateIpv6(ip) {
   return false;
 }
 
-// Combined IP check: dispatch to IPv4 or IPv6
 function isPrivateIp(ip) {
   if (ip.includes(":")) {
     return isPrivateIpv6(ip);
@@ -124,7 +115,6 @@ function isPrivateIp(ip) {
   return isPrivateIpv4(ip);
 }
 
-// Validate that a URL uses only http/https and resolves to public IPs
 async function isSafeUrl(url) {
   try {
     const parsed = new URL(url);
@@ -147,7 +137,6 @@ async function isSafeUrl(url) {
   }
 }
 
-// Check URL accessibility with timeout and HEAD fallback to GET
 async function checkUrl(url) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -174,7 +163,6 @@ async function checkUrl(url) {
   }
 }
 
-// Convert avatar input to a final URL
 function processAvatar(avatarInput) {
   const trimmed = avatarInput.trim();
   if (/^\d+$/.test(trimmed)) {
@@ -183,9 +171,9 @@ function processAvatar(avatarInput) {
   return trimmed;
 }
 
-// Validate custom ID format: only lowercase letters, numbers, and hyphens
+// 允许大写字母、小写字母、数字和连字符
 function isValidId(id) {
-  return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(id);
+  return /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(id);
 }
 
 async function main() {
@@ -278,14 +266,16 @@ async function main() {
 
     if (!isValidId(fields.link_id)) {
       throw new Error(
-        `Invalid Link ID: "${fields.link_id}". Only lowercase letters, numbers, and hyphens are allowed.`
+        `Invalid Link ID: "${fields.link_id}". Only letters (case-insensitive), numbers, and hyphens are allowed.`,
       );
     }
 
     const newFilePath = path.join(DATA_DIR, `${fields.link_id}.yaml`);
 
     if (fs.existsSync(newFilePath)) {
-      throw new Error(`Link ID "${fields.link_id}" already exists. Please choose a different one.`);
+      throw new Error(
+        `Link ID "${fields.link_id}" already exists. Please choose a different one.`,
+      );
     }
 
     log(`New file: ${newFilePath}`);

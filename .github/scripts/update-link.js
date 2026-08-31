@@ -8,24 +8,20 @@ const issueBody = process.env.ISSUE_BODY;
 
 const DATA_DIR = path.join(process.env.GITHUB_WORKSPACE, "data");
 
-// Simple logger
 function log(msg) {
   console.log(`[update-link] ${msg}`);
 }
 
-// Append a key=value line to the GitHub Actions output file
 function setOutput(key, value) {
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
 }
 
-// Clean a field: trim whitespace and treat "_No response_" as null
 function cleanField(value) {
   if (!value) return null;
   const trimmed = value.trim();
   return trimmed === "_No response_" ? null : trimmed;
 }
 
-// Extract fields from the issue body using regex
 function parseIssueBody(body) {
   const fields = {
     link_id: null,
@@ -68,7 +64,6 @@ function parseIssueBody(body) {
   return fields;
 }
 
-// Check if an IPv4 address is private or reserved
 function isPrivateIpv4(ip) {
   const parts = ip.split(".").map(Number);
   if (parts.length !== 4) return true;
@@ -91,7 +86,6 @@ function isPrivateIpv4(ip) {
   return false;
 }
 
-// Check if an IPv6 address is private or reserved
 function isPrivateIpv6(ip) {
   const normalized = ip.toLowerCase().split("%")[0];
 
@@ -104,6 +98,7 @@ function isPrivateIpv6(ip) {
   }
 
   if (normalized.startsWith("fc") || normalized.startsWith("fd")) return true;
+
   if (
     normalized.startsWith("fe8") ||
     normalized.startsWith("fe9") ||
@@ -123,7 +118,6 @@ function isPrivateIp(ip) {
   return isPrivateIpv4(ip);
 }
 
-// Validate that a URL uses only http/https and resolves to public IPs
 async function isSafeUrl(url) {
   try {
     const parsed = new URL(url);
@@ -146,7 +140,6 @@ async function isSafeUrl(url) {
   }
 }
 
-// Check URL accessibility with timeout and HEAD fallback to GET
 async function checkUrl(url) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -173,7 +166,6 @@ async function checkUrl(url) {
   }
 }
 
-// Convert avatar input to a final URL
 function processAvatar(avatarInput) {
   const trimmed = avatarInput.trim();
   if (/^\d+$/.test(trimmed)) {
@@ -182,7 +174,6 @@ function processAvatar(avatarInput) {
   return trimmed;
 }
 
-// Parse a simple YAML file (flat key: "value" format) into an object
 function parseYamlFile(filePath) {
   const content = fs.readFileSync(filePath, "utf8");
   const lines = content.split(/\r?\n/);
@@ -196,7 +187,6 @@ function parseYamlFile(filePath) {
   return data;
 }
 
-// Update a specific key in the YAML file (or add if missing)
 function updateYamlKey(filePath, key, newValue) {
   const content = fs.readFileSync(filePath, "utf8");
   const lines = content.split(/\r?\n/);
@@ -215,6 +205,11 @@ function updateYamlKey(filePath, key, newValue) {
   fs.writeFileSync(filePath, updatedLines.join("\n"), "utf8");
 }
 
+// 允许大写字母、小写字母、数字和连字符
+function isValidId(id) {
+  return /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(id);
+}
+
 async function main() {
   try {
     if (!issueUser || !issueBody) {
@@ -224,8 +219,11 @@ async function main() {
     const fields = parseIssueBody(issueBody);
     log("Parsed fields:", JSON.stringify(fields, null, 2));
 
-    if (!fields.link_id || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(fields.link_id)) {
-      throw new Error("Invalid or missing Link ID. Only lowercase letters, numbers, and hyphens are allowed.");
+    // 校验原 Link ID
+    if (!fields.link_id || !isValidId(fields.link_id)) {
+      throw new Error(
+        "Invalid or missing Link ID. Only letters (case-insensitive), numbers, and hyphens are allowed.",
+      );
     }
 
     const filePath = path.join(DATA_DIR, `${fields.link_id}.yaml`);
@@ -233,36 +231,38 @@ async function main() {
       throw new Error(`Link with ID ${fields.link_id} does not exist`);
     }
 
-    // Check ownership
+    // 检查所有权
     const existingData = parseYamlFile(filePath);
     if (existingData.github !== issueUser) {
       throw new Error(`You are not the owner of link ID ${fields.link_id}`);
     }
     log("Ownership verified");
 
-    // Validate new_link_id format if provided
+    // 校验新 Link ID（若提供）
     let finalId = fields.link_id;
     if (fields.new_link_id) {
-      if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(fields.new_link_id)) {
+      if (!isValidId(fields.new_link_id)) {
         throw new Error(
-          `Invalid new Link ID: "${fields.new_link_id}". Only lowercase letters, numbers, and hyphens are allowed.`
+          `Invalid new Link ID: "${fields.new_link_id}". Only letters (case-insensitive), numbers, and hyphens are allowed.`,
         );
       }
       if (fields.new_link_id !== fields.link_id) {
         const newFilePath = path.join(DATA_DIR, `${fields.new_link_id}.yaml`);
         if (fs.existsSync(newFilePath)) {
-          throw new Error(`Link ID "${fields.new_link_id}" already exists. Please choose a different one.`);
+          throw new Error(
+            `Link ID "${fields.new_link_id}" already exists. Please choose a different one.`,
+          );
         }
         finalId = fields.new_link_id;
       }
     }
 
-    // Determine if any optional field was provided
+    // 确定是否有可选字段
     const optionalFields = ["title", "name", "desc", "link", "avatar", "rss"];
     const hasAnyField = optionalFields.some((f) => fields[f] !== null);
 
     if (!hasAnyField && !fields.new_link_id) {
-      // All optional fields are empty and no rename -> delete the file
+      // 删除文件
       fs.unlinkSync(filePath);
       log(`Link ID ${fields.link_id} deleted`);
       setOutput("outcome", "success");
@@ -275,7 +275,7 @@ async function main() {
       return;
     }
 
-    // Validate and process URL/avatar/RSS if they are being updated
+    // 校验并处理 URL、头像、RSS
     if (fields.link) {
       if (!(await isSafeUrl(fields.link))) {
         throw new Error(
@@ -316,7 +316,7 @@ async function main() {
       }
     }
 
-    // Update the YAML file with provided fields
+    // 更新 YAML 文件
     const updates = {
       title: fields.title,
       name: fields.name,
@@ -332,7 +332,7 @@ async function main() {
       }
     }
 
-    // Rename file if ID was changed
+    // 重命名文件（若 ID 改变）
     let outputId = fields.link_id;
     let action = "update";
     if (finalId !== fields.link_id) {

@@ -8,7 +8,7 @@ body:
     attributes:
       label: Link ID
       description: |
-        A custom ID for your link. Only lowercase letters, numbers, and hyphens are allowed.
+        A custom ID for your link. Only letters, numbers, and hyphens are allowed.
         This will be used as the filename, so choose something unique and memorable.
       placeholder: "e.g., my-blog"
     validations:
